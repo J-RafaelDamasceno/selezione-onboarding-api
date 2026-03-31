@@ -526,16 +526,17 @@ def gerar_grafico_evolucao_objetivo(
         ax.set_ylim(0, max_val * 1.12)
 
         # ==================== LEGENDA ELEGANTE ====================
-        handles = ax.get_legend_handles_labels()[0]
-        if handles:
+        handles, labels = ax.get_legend_handles_labels()
+        if handles and labels:
             ax.legend(
-            handles=handles,
-            loc='lower right',
-            fontsize=7,
-            frameon=False,
-            handlelength=1.5,
-            labelspacing=0.3
-        )
+                handles,
+                labels,
+                loc="lower right",
+                fontsize=7,
+                frameon=False,
+                handlelength=1.5,
+                labelspacing=0.3,
+            )
 
         # Ajuste final das margens
         plt.subplots_adjust(left=0.1, right=0.95, top=0.92, bottom=0.12)
