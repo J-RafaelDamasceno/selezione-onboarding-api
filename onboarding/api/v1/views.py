@@ -134,14 +134,21 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
             
             pdf_path = gerar_relatorio_pdf_weasyprint(cliente, form_data)
             
+            # Lê o conteúdo do arquivo antes do cleanup deletar
+            with open(pdf_path, 'rb') as f:
+                pdf_content = f.read()
+            
+            # Deleta o arquivo após ler
+            try:
+                os.remove(pdf_path)
+            except Exception:
+                pass
+            
+            from django.http import HttpResponse
             nome_cliente = submission.Nome or "cliente"
-            pdf_file = open(pdf_path, 'rb')
-            response = FileResponse(
-                pdf_file,
-                content_type='application/pdf',
-                as_attachment=False,
-                filename=f"relatorio_{nome_cliente}.pdf"
-            )
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="relatorio_{nome_cliente}.pdf"'
+            response['Content-Length'] = len(pdf_content)
             return response
             
         except Exception as e:
@@ -150,7 +157,7 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                 'success': False,
                 'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
-
+    
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request):
         user = request.user
