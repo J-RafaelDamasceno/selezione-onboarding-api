@@ -200,7 +200,7 @@ def gerar_grafico_alocacao_colorido(perfil: str) -> str:
     # Ajustar os labels
     for text in texts:
         text.set_fontsize(7)
-        text.set_weight('500')
+        text.set_weight('medium')
 
     # Título menor
     ax.set_title(f'Alocação Sugerida - Perfil {perfil}', fontsize=9, fontweight='bold', pad=8)
@@ -497,7 +497,7 @@ def gerar_grafico_evolucao_objetivo(
             ax.annotate(f'{meses_para_meta} meses',
                        xy=(meses_para_meta, pat_ponto),
                        xytext=(meses_para_meta + prazo_meses*0.03, pat_ponto * 0.92),
-                       fontsize=7, fontweight='500', 
+                       fontsize=7, fontweight='medium', 
                        color='#3b7b6e', ha='left')
 
         # ==================== FORMATAÇÃO DOS NÚMEROS ====================
