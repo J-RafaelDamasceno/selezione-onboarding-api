@@ -403,47 +403,61 @@ def gerar_grafico_evolucao_objetivo(
     objetivo_index: int,
     pasta_temp: str,
 ) -> str:
-    import matplotlib
-    matplotlib.use("Agg")
-
-    import matplotlib.pyplot as plt
-    from matplotlib.ticker import FuncFormatter, MaxNLocator
-    import uuid
-    import os
-    import traceback
-
+    """
+    Gera gráfico de evolução patrimonial SEM usar legend() automática
+    para evitar bug de deepcopy no matplotlib + Python 3.14.
+    """
     fig = None
 
     try:
-        nome_objetivo = objetivo.get("name", objetivo.get("nome", f"Objetivo_{objetivo_index}"))
-        valor_meta = to_float(objetivo.get("valor", objetivo.get("value", 0)))
+        nome_objetivo = objetivo.get(
+            "name",
+            objetivo.get("nome", f"Objetivo_{objetivo_index}")
+        )
+
+        valor_meta = to_float(
+            objetivo.get("valor", objetivo.get("value", 0))
+        )
+
         prazo_meses = int(objetivo.get("months", 12))
 
-        print(f"📊 Gerando gráfico {objetivo_index}: {nome_objetivo}")
-
-        if valor_meta <= 0:
+        if valor_meta <= 0 or prazo_meses <= 0:
             return None
 
         taxa_mensal = (1 + TAXA_JUROS_ANUAL) ** (1 / 12) - 1
-        aporte_nec = calcular_aporte_mensal_necessario(valor_meta, prazo_meses)
+        aporte_nec = calcular_aporte_mensal_necessario(
+            valor_meta,
+            prazo_meses
+        )
+
         meses = list(range(1, prazo_meses + 1))
 
-        patrimonio_nec, acc = [], 0.0
+        # ==================== LINHA NECESSÁRIA ====================
+        patrimonio_nec = []
+        acc = 0.0
         for _ in range(prazo_meses):
             acc = acc * (1 + taxa_mensal) + aporte_nec
             patrimonio_nec.append(acc)
 
+        # ==================== LINHA REAL ====================
+        patrimonio_real = []
+        acc = 0.0
+
         if capacidade_mensal > 0:
-            patrimonio_real, acc = [], 0.0
             for _ in range(prazo_meses):
                 acc = acc * (1 + taxa_mensal) + capacidade_mensal
                 patrimonio_real.append(acc)
-            meses_para_meta = calcular_tempo_para_meta(valor_meta, capacidade_mensal)
+
+            meses_para_meta = calcular_tempo_para_meta(
+                valor_meta,
+                capacidade_mensal
+            )
         else:
             patrimonio_real = patrimonio_nec.copy()
             meses_para_meta = prazo_meses
 
-        fig, ax = plt.subplots(figsize=(8, 3.2))
+        # ==================== FIGURA ====================
+        fig, ax = plt.subplots(figsize=(8, 3.4))
         fig.patch.set_facecolor("white")
         ax.set_facecolor("white")
 
@@ -453,194 +467,139 @@ def gerar_grafico_evolucao_objetivo(
         ax.grid(False)
         ax.tick_params(axis="both", which="both", length=0)
 
+        # Meta
         ax.axhline(
             y=valor_meta,
-            color="#c26858",
+            color=COR_VERMELHO,
             linestyle="--",
             linewidth=1.2,
-            alpha=0.7,
+            alpha=0.8,
         )
 
+        # Linha necessária
         ax.plot(
             meses,
             patrimonio_nec,
-            color="#4a6f8f",
-            linewidth=2.2,
-            label=f"Necessário ({formatar_br(round(aporte_nec))}/mês)",
+            color=COR_AZUL,
+            linewidth=2.4,
         )
 
+        # Linha real
         if capacidade_mensal > 0:
             ax.plot(
                 meses,
                 patrimonio_real,
-                color="#3b7b6e",
-                linewidth=2.2,
-                label=f"Seu aporte ({formatar_br(capacidade_mensal)}/mês)",
+                color=COR_VERDE,
+                linewidth=2.4,
             )
 
-        if capacidade_mensal > 0 and meses_para_meta <= prazo_meses:
+        # ==================== PONTO DA META ====================
+        if (
+            capacidade_mensal > 0
+            and 1 <= meses_para_meta <= prazo_meses
+        ):
             pat_ponto = patrimonio_real[meses_para_meta - 1]
+
             ax.scatter(
                 meses_para_meta,
                 pat_ponto,
-                s=50,
-                color="#3b7b6e",
+                s=45,
+                color=COR_VERDE,
                 zorder=5,
             )
 
-            # texto simples ao invés de annotate
             ax.text(
                 meses_para_meta,
-                pat_ponto * 0.92,
+                pat_ponto * 0.94,
                 f"{meses_para_meta} meses",
                 fontsize=7,
-                color="#3b7b6e",
+                color=COR_VERDE,
+                ha="center",
             )
 
+        # ==================== FORMATADORES ====================
         def fmt_y(valor, _):
-            if valor == 0:
-                return "R$ 0"
             if valor >= 1_000_000:
-                return f"R$ {valor/1_000_000:.1f}M"
+                return f"R$ {valor / 1_000_000:.1f}M"
             if valor >= 1_000:
-                return f"R$ {valor/1_000:.0f}K"
+                return f"R$ {valor / 1_000:.0f}K"
             return f"R$ {valor:.0f}"
 
         ax.yaxis.set_major_formatter(FuncFormatter(fmt_y))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
         ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
 
-        ax.tick_params(axis="both", labelsize=8, colors="#9aa6b5")
-        ax.set_xlabel("Meses", fontsize=8, color="#9aa6b5")
+        ax.tick_params(axis="both", labelsize=8, colors=COR_TEXTO_SEC)
+        ax.set_xlabel("Meses", fontsize=8, color=COR_TEXTO_SEC)
 
-        max_val = max(max(patrimonio_nec), max(patrimonio_real), valor_meta)
+        max_val = max(
+            max(patrimonio_nec),
+            max(patrimonio_real),
+            valor_meta,
+        )
+
         ax.set_xlim(1, prazo_meses)
         ax.set_ylim(0, max_val * 1.12)
 
-        ax.legend(loc="lower right", fontsize=7, frameon=False)
+        # ==================== LEGENDA MANUAL ====================
+        legenda = []
+
+        legenda.append(
+            mpatches.Patch(
+                color=COR_AZUL,
+                label=f"Necessário ({formatar_br(round(aporte_nec))}/mês)"
+            )
+        )
+
+        if capacidade_mensal > 0:
+            legenda.append(
+                mpatches.Patch(
+                    color=COR_VERDE,
+                    label=f"Seu aporte ({formatar_br(capacidade_mensal)}/mês)"
+                )
+            )
+
+        legenda.append(
+            mpatches.Patch(
+                color=COR_VERMELHO,
+                label="Meta"
+            )
+        )
+
+        ax.legend(
+            handles=legenda,
+            loc="lower right",
+            fontsize=7,
+            frameon=False,
+        )
 
         fig.tight_layout()
+
+        os.makedirs(pasta_temp, exist_ok=True)
 
         nome_arquivo = f"objetivo_{objetivo_index}_{uuid.uuid4().hex[:8]}.png"
         img_path = os.path.join(pasta_temp, nome_arquivo)
 
-        fig.savefig(img_path, dpi=140)
-        print(f"   ✅ Gráfico salvo: {img_path}")
+        fig.savefig(
+            img_path,
+            dpi=140,
+            bbox_inches="tight",
+            facecolor="white",
+        )
 
         return img_path if os.path.exists(img_path) else None
 
     except Exception as e:
-        print(f"   ❌ Erro ao gerar gráfico {objetivo_index}: {e}")
-        traceback.print_exc()
+        logger.error(
+            f"Erro ao gerar gráfico {objetivo_index}: {e}",
+            exc_info=True
+        )
         return None
 
     finally:
-        if fig:
+        if fig is not None:
             plt.close(fig)
 
-# ==================== FUNÇÃO PRINCIPAL ====================
-
-def calcular_idade_cliente(cliente: dict) -> int:
-    """
-    Calcula a idade do cliente baseado na data de nascimento ou ano de nascimento.
-    
-    Args:
-        cliente: Dicionário com dados do cliente
-    
-    Returns:
-        int: Idade calculada ou None se não for possível calcular
-    """
-    from datetime import date, datetime
-    
-    try:
-        # ==================== VERIFICA CAMPOS ====================
-        
-        # 1. Tenta obter data de nascimento completa
-        if 'data_nascimento' in cliente and cliente['data_nascimento']:
-            data_nasc = cliente['data_nascimento']
-            
-            # Converte string para date se necessário
-            if isinstance(data_nasc, str):
-                # Tenta diferentes formatos de data
-                formatos = ['%Y-%m-%d', '%d/%m/%Y', '%Y/%m/%d', '%d-%m-%Y']
-                for fmt in formatos:
-                    try:
-                        data_nasc = datetime.strptime(data_nasc, fmt).date()
-                        break
-                    except ValueError:
-                        continue
-                else:
-                    # Se nenhum formato funcionar, tenta extrair apenas o ano
-                    if len(data_nasc) >= 4:
-                        ano = int(data_nasc[:4])
-                        hoje = date.today()
-                        return hoje.year - ano
-                    return None
-            
-            # Se for datetime, converte para date
-            elif isinstance(data_nasc, datetime):
-                data_nasc = data_nasc.date()
-            
-            # Se for date, usa diretamente
-            elif isinstance(data_nasc, date):
-                pass
-            else:
-                return None
-            
-            # Calcula idade com data completa
-            hoje = date.today()
-            idade = hoje.year - data_nasc.year
-            
-            # Ajusta se ainda não fez aniversário este ano
-            if (hoje.month, hoje.day) < (data_nasc.month, data_nasc.day):
-                idade -= 1
-            
-            return idade
-        
-        # 2. Tenta usar o campo 'ano_nascimento'
-        elif 'ano_nascimento' in cliente and cliente['ano_nascimento']:
-            try:
-                ano_nasc = int(cliente['ano_nascimento'])
-                hoje = date.today()
-                return hoje.year - ano_nasc
-            except (ValueError, TypeError):
-                pass
-        
-        # 3. Tenta usar o campo 'idade' (pode ser ano de nascimento ou idade real)
-        elif 'idade' in cliente and cliente['idade']:
-            valor = cliente['idade']
-            
-            # Tenta converter para número
-            try:
-                num = int(valor)
-                
-                # Se for um número entre 1900 e 2026, provavelmente é ANO DE NASCIMENTO
-                if 1900 <= num <= 2026:
-                    hoje = date.today()
-                    idade = hoje.year - num
-                    # Verifica se a idade é plausível (0 a 120 anos)
-                    if 0 <= idade <= 120:
-                        return idade
-                    else:
-                        return None
-                
-                # Se for um número entre 0 e 120, provavelmente já é IDADE
-                elif 0 <= num <= 120:
-                    return num
-                
-                # Outros valores
-                else:
-                    return None
-                    
-            except (ValueError, TypeError):
-                # Se não for número, retorna como está
-                return None
-        
-        return None
-        
-    except Exception as e:
-        logger.error(f"Erro ao calcular idade: {e}")
-        return None
 
 
 def gerar_relatorio_pdf_weasyprint(cliente: dict, form_data: dict, output_path: str = None) -> str:
