@@ -403,32 +403,36 @@ def gerar_grafico_evolucao_objetivo(
     objetivo_index: int,
     pasta_temp: str,
 ) -> str:
-    """
-    Gera gráfico de evolução patrimonial para um objetivo financeiro.
-    Versão minimalista e elegante - sem grades, apenas números e curvas.
-    """
+    import matplotlib
+    matplotlib.use("Agg")
+
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FuncFormatter, MaxNLocator
+    import uuid
+    import os
+    import traceback
+
+    fig = None
+
     try:
-        nome_objetivo = objetivo.get('name', objetivo.get('nome', f'Objetivo_{objetivo_index}'))
-        valor_meta    = to_float(objetivo.get('valor', objetivo.get('value', 0)))
-        prazo_meses   = int(objetivo.get('months', 12))
+        nome_objetivo = objetivo.get("name", objetivo.get("nome", f"Objetivo_{objetivo_index}"))
+        valor_meta = to_float(objetivo.get("valor", objetivo.get("value", 0)))
+        prazo_meses = int(objetivo.get("months", 12))
 
         print(f"📊 Gerando gráfico {objetivo_index}: {nome_objetivo}")
 
         if valor_meta <= 0:
-            print("   ⚠️  Valor meta = 0, ignorando")
             return None
 
         taxa_mensal = (1 + TAXA_JUROS_ANUAL) ** (1 / 12) - 1
-        aporte_nec  = calcular_aporte_mensal_necessario(valor_meta, prazo_meses)
-        meses       = list(range(1, prazo_meses + 1))
+        aporte_nec = calcular_aporte_mensal_necessario(valor_meta, prazo_meses)
+        meses = list(range(1, prazo_meses + 1))
 
-        # Série necessária
         patrimonio_nec, acc = [], 0.0
         for _ in range(prazo_meses):
             acc = acc * (1 + taxa_mensal) + aporte_nec
             patrimonio_nec.append(acc)
 
-        # Série real
         if capacidade_mensal > 0:
             patrimonio_real, acc = [], 0.0
             for _ in range(prazo_meses):
@@ -439,127 +443,101 @@ def gerar_grafico_evolucao_objetivo(
             patrimonio_real = patrimonio_nec.copy()
             meses_para_meta = prazo_meses
 
-        # ── Layout minimalista e elegante ──────────────────────────────────────
-        plt.rcParams.update({
-            "font.family": "DejaVu Sans",
-            "font.size": 9,
-        })
+        fig, ax = plt.subplots(figsize=(8, 3.2))
+        fig.patch.set_facecolor("white")
+        ax.set_facecolor("white")
 
-        # Figura com fundo branco puro
-        fig, ax = plt.subplots(figsize=(8, 3.2), facecolor='white')
-        ax.set_facecolor('white')
+        for spine in ax.spines.values():
+            spine.set_visible(False)
 
-        # ==================== REMOVE TODAS AS LINHAS ====================
-        # Remove todas as bordas
-        for spine in ['top', 'right', 'left', 'bottom']:
-            ax.spines[spine].set_visible(False)
-        
-        # Remove grades completamente
         ax.grid(False)
-        
-        # Remove ticks e suas linhas
-        ax.tick_params(axis='both', which='both', length=0)
-        
-        # ==================== LINHA DA META (horizontal) ====================
-        # Cor suave que combina com a paleta clara
-        ax.axhline(y=valor_meta, color='#c26858', linestyle='--', 
-                   linewidth=1.2, alpha=0.7, zorder=2)
-        
-        # Texto da meta com cor combinando
-        ax.text(prazo_meses * 0.98, valor_meta * 1.02,
-                formatar_br(valor_meta), fontsize=8, 
-                color='#c26858', ha="right", va="bottom", alpha=0.9)
+        ax.tick_params(axis="both", which="both", length=0)
 
-        # ==================== CURVA NECESSÁRIA ====================
-        ax.plot(meses, patrimonio_nec,
-                color='#4a6f8f', linewidth=2.2,
-                solid_capstyle="round", zorder=3,
-                label=f'Aporte necessário ({formatar_br(round(aporte_nec))}/mês)')
+        ax.axhline(
+            y=valor_meta,
+            color="#c26858",
+            linestyle="--",
+            linewidth=1.2,
+            alpha=0.7,
+        )
 
-        # ==================== CURVA REAL ====================
+        ax.plot(
+            meses,
+            patrimonio_nec,
+            color="#4a6f8f",
+            linewidth=2.2,
+            label=f"Necessário ({formatar_br(round(aporte_nec))}/mês)",
+        )
+
         if capacidade_mensal > 0:
-            ax.plot(meses, patrimonio_real,
-                    color='#3b7b6e', linewidth=2.2,
-                    linestyle='-', zorder=3,
-                    label=f'Seu aporte ({formatar_br(capacidade_mensal)}/mês)')
+            ax.plot(
+                meses,
+                patrimonio_real,
+                color="#3b7b6e",
+                linewidth=2.2,
+                label=f"Seu aporte ({formatar_br(capacidade_mensal)}/mês)",
+            )
 
-        # ==================== PONTO DE ATINGIMENTO ====================
         if capacidade_mensal > 0 and meses_para_meta <= prazo_meses:
-            acc = 0.0
-            for _ in range(meses_para_meta):
-                acc = acc * (1 + taxa_mensal) + capacidade_mensal
-            pat_ponto = acc
+            pat_ponto = patrimonio_real[meses_para_meta - 1]
+            ax.scatter(
+                meses_para_meta,
+                pat_ponto,
+                s=50,
+                color="#3b7b6e",
+                zorder=5,
+            )
 
-            ax.scatter(meses_para_meta, pat_ponto, s=70, 
-                      color='#3b7b6e', edgecolors='white', 
-                      linewidth=1.8, zorder=5, alpha=0.9)
-            
-            ax.annotate(f'{meses_para_meta} meses',
-                       xy=(meses_para_meta, pat_ponto),
-                       xytext=(meses_para_meta + prazo_meses*0.03, pat_ponto * 0.92),
-                       fontsize=7, fontweight='medium', 
-                       color='#3b7b6e', ha='left')
+            # texto simples ao invés de annotate
+            ax.text(
+                meses_para_meta,
+                pat_ponto * 0.92,
+                f"{meses_para_meta} meses",
+                fontsize=7,
+                color="#3b7b6e",
+            )
 
-        # ==================== FORMATAÇÃO DOS NÚMEROS ====================
         def fmt_y(valor, _):
-            if valor == 0:          return "R$ 0"
-            if valor >= 1_000_000:  return f"R$ {valor/1_000_000:.1f}M"
-            if valor >= 1_000:      return f"R$ {valor/1_000:.0f}K"
+            if valor == 0:
+                return "R$ 0"
+            if valor >= 1_000_000:
+                return f"R$ {valor/1_000_000:.1f}M"
+            if valor >= 1_000:
+                return f"R$ {valor/1_000:.0f}K"
             return f"R$ {valor:.0f}"
 
-        from matplotlib.ticker import FuncFormatter, MaxNLocator
-        
-        # Apenas os números, sem linhas
         ax.yaxis.set_major_formatter(FuncFormatter(fmt_y))
         ax.yaxis.set_major_locator(MaxNLocator(nbins=4))
         ax.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=5))
 
-        # Cores dos números - suaves e elegantes
-        ax.tick_params(axis="both", labelsize=8, colors='#9aa6b5')
-        
-        # Rótulo do eixo X - discreto
-        ax.set_xlabel("Meses", fontsize=8, color='#9aa6b5', labelpad=6, alpha=0.8)
+        ax.tick_params(axis="both", labelsize=8, colors="#9aa6b5")
+        ax.set_xlabel("Meses", fontsize=8, color="#9aa6b5")
 
-        # Limites dos eixos
         max_val = max(max(patrimonio_nec), max(patrimonio_real), valor_meta)
         ax.set_xlim(1, prazo_meses)
         ax.set_ylim(0, max_val * 1.12)
 
-        # ==================== LEGENDA ELEGANTE ====================
-        handles, labels = ax.get_legend_handles_labels()
-        if handles and labels:
-            ax.legend(
-                handles,
-                labels,
-                loc="lower right",
-                fontsize=7,
-                frameon=False,
-                handlelength=1.5,
-                labelspacing=0.3,
-            )
+        ax.legend(loc="lower right", fontsize=7, frameon=False)
 
-        # Ajuste final das margens
-        plt.subplots_adjust(left=0.1, right=0.95, top=0.92, bottom=0.12)
+        fig.tight_layout()
 
-        # ==================== SALVAR ====================
         nome_arquivo = f"objetivo_{objetivo_index}_{uuid.uuid4().hex[:8]}.png"
         img_path = os.path.join(pasta_temp, nome_arquivo)
-        plt.savefig(img_path, dpi=140, facecolor='white', bbox_inches='tight')
-        plt.close(fig)
 
-        if os.path.exists(img_path) and os.path.getsize(img_path) > 0:
-            print(f"   ✅ Gráfico salvo: {img_path}")
-            return img_path
+        fig.savefig(img_path, dpi=140)
+        print(f"   ✅ Gráfico salvo: {img_path}")
 
-        print("   ❌ Arquivo não foi criado ou está vazio")
-        return None
+        return img_path if os.path.exists(img_path) else None
 
     except Exception as e:
         print(f"   ❌ Erro ao gerar gráfico {objetivo_index}: {e}")
-        import traceback
         traceback.print_exc()
         return None
-    
+
+    finally:
+        if fig:
+            plt.close(fig)
+
 # ==================== FUNÇÃO PRINCIPAL ====================
 
 def calcular_idade_cliente(cliente: dict) -> int:
