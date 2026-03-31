@@ -10,45 +10,28 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 import os
-
+import dj_database_url
 from pathlib import Path
-
 from datetime import timedelta
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-}
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # seu atual
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # adiciona refresh token de 7 dias
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# ============================================
+# CONFIGURAÇÕES DE SEGURANÇA (PRODUÇÃO)
+# ============================================
+# Pegar SECRET_KEY do ambiente, ou usar uma padrão (NUNCA em produção!)
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-i3)pqc&vxur9lauo^u$1-rsu=g$yzfva$u5py0$30xn$b$@06u')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-i3)pqc&vxur9lauo^u$1-rsu=g$yzfva$u5py0$30xn$b$@06u"
+# Debug - deve ser False em produção
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Hosts permitidos - importante para o Render
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
-ALLOWED_HOSTS = []
-
-# Application definition
-
+# ============================================
+# APLICAÇÕES E MIDDLEWARE
+# ============================================
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -62,9 +45,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",  # DEVE SER O PRIMEIRO
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",  # PARA ARQUIVOS ESTÁTICOS
     "django.contrib.sessions.middleware.SessionMiddleware",  
-    "corsheaders.middleware.CorsMiddleware",                 
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -72,20 +56,50 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# ============================================
+# CORS CONFIGURATION
+# ============================================
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True
+
+# ============================================
+# AUTHENTICATION
+# ============================================
 AUTHENTICATION_BACKENDS = ['onboarding.api.v1.backends.EmailBackend']
-
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # onde seu frontend está rodando
-]
-
-CORS_ALLOW_CREDENTIALS = True  # permite enviar cookies de sessão
 AUTH_USER_MODEL = "onboarding.CustomUser"
-ROOT_URLCONF = "setup.urls"
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# ============================================
+# DATABASE - Usa PostgreSQL no Render ou SQLite local
+# ============================================
+DATABASES = {
+    'default': dj_database_url.config(
+        default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'),
+        conn_max_age=600
+    )
+}
+
+# ============================================
+# TEMPLATES - Importante para seu relatório HTML
+# ============================================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, 'templates')],  # PASTA DE TEMPLATES
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -97,43 +111,51 @@ TEMPLATES = [
     },
 ]
 
+# ============================================
+# STATIC FILES - Para CSS, JS, imagens
+# ============================================
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Se tiver arquivos estáticos
+
+# Para servir arquivos estáticos com WhiteNoise
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# ============================================
+# MEDIA FILES - Para uploads de arquivos
+# ============================================
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# ============================================
+# URLS
+# ============================================
+ROOT_URLCONF = "setup.urls"
 WSGI_APPLICATION = "setup.wsgi.application"
 
+# ============================================
+# INTERNATIONALIZATION
+# ============================================
+LANGUAGE_CODE = "pt-br"  # Mudei para pt-br
+TIME_ZONE = "America/Sao_Paulo"  # Fuso horário do Brasil
+USE_I18N = True
+USE_TZ = True
 
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
-
-
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
-
+# ============================================
+# PASSWORD VALIDATION
+# ============================================
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
-
-LANGUAGE_CODE = "en-us"
-
-TIME_ZONE = "UTC"
-
-USE_I18N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
-STATIC_URL = "static/"
+# ============================================
+# SECURITY (Produção)
+# ============================================
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
