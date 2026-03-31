@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relatório de Alocação Estratégica | Selezione Investimentos</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&display=swap");
+      /* ============================================
+           VARIÁVEIS DE DESIGN - VERSÃO CLARA
+           Paleta suave e clean inspirada na imagem
+           ============================================ */
+      :root {
+        /* Cores Principais - Versão Clara e Elegante */
+        --primary-dark: #1a2c3e;
+        --primary-medium: #2c4a6e;
+        --primary-light: #4a6f8f;
+        --secondary-green: #3b7b6e;
+        --secondary-orange: #c28a3e;
+        --secondary-purple: #8a75a8;
+        --secondary-red: #c26858;
+
+        /* Escala de Cinza - Fundos Claros */
+        --gray-50: #ffffff;
+        --gray-100: #fbfcfd;
+        --gray-200: #f7f9fc;
+        --gray-300: #f0f3f8;
+        --gray-400: #e8edf3;
+        --gray-500: #dfe4ec;
+        --gray-600: #cad1dc;
+        --gray-700: #9aa6b5;
+        --gray-800: #6f7d8f;
+        --gray-900: #4a5a6e;
+
+        /* Cores de Status - Mantidas suaves */
+        --success-bg: #ecfef4;
+        --success-text: #057857;
+        --success-border: #a8f3d0;
+        --warning-bg: #fffbeb;
+        --warning-text: #b45409;
+        --warning-border: #fde68a;
+        --observation-bg: #f0f4fa;
+        --observation-text: #2c5a7a;
+        --observation-border: #e2eaf3;
+
+        /* Espaçamentos */
+        --space-xs: 4px;
+        --space-sm: 8px;
+        --space-md: 16px;
+        --space-lg: 24px;
+        --space-xl: 32px;
+        --space-2xl: 40px;
+
+        /* Tipografia */
+        --font-xs: 8px;
+        --font-sm: 10px;
+        --font-base: 11px;
+        --font-md: 12px;
+        --font-lg: 13px;
+        --font-xl: 16px;
+        --font-2xl: 22px;
+        --font-3xl: 28px;
+        --font-4xl: 36px;
+
+        /* Bordas */
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+        --radius-full: 40px;
+      }
+
+      /* Reset e Base */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      @page {
+        size: A4;
+        margin: 1.6cm;
+        @bottom-center {
+          content: element(footer);
+        }
+      }
+
+      body {
+        font-family:
+          "Inter",
+          "Helvetica Neue",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background: white;
+        color: var(--primary-dark);
+        line-height: 1.5;
+        font-size: var(--font-base);
+      }
+
+      /* ============================================
+           COMPONENTES PADRONIZADOS - ESTILO CLARO
+           ============================================ */
+      /* Data Row */
+      .data-row {
+        display: flex;
+        align-items: baseline;
+        background: white;
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-300);
+        font-size: var(--font-base);
+        font-weight: 500;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+      }
+
+      .data-label {
+        font-size: var(--font-sm);
+        font-weight: 500;
+        color: var(--gray-800);
+        letter-spacing: 0.3px;
+        margin-right: 6px;
+        text-transform: uppercase;
+      }
+
+      .data-value {
+        font-size: var(--font-sm);
+        font-weight: 600;
+        color: var(--primary-dark);
+      }
+
+      .data-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-md);
+      }
+
+      /* Cards Padronizados - Versão Clara */
+      .card {
+        background: white;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-lg);
+        padding: var(--space-md) var(--space-lg);
+      }
+
+      .card-stats {
+        background: white;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-lg);
+        padding: var(--space-md) var(--space-lg);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+      }
+
+      .stat-value {
+        font-size: var(--font-2xl);
+        font-weight: 600;
+        color: var(--primary-dark);
+        line-height: 1.2;
+      }
+
+      .perfil-tag {
+        display: inline-block;
+        background: var(--primary-dark);
+        color: white;
+        font-size: var(--font-md);
+        padding: var(--space-xs) var(--space-md);
+        border-radius: var(--radius-full);
+        font-weight: 500;
+        align-self: flex-start;
+      }
+
+      /* Grid System */
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-md);
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-md);
+      }
+
+      /* Seções */
+      .section {
+        margin-bottom: var(--space-xl);
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        margin-bottom: var(--space-md);
+        margin-top: var(--space-lg);
+      }
+
+      .section-icon {
+        width: 28px;
+        height: 28px;
+        background: var(--gray-300);
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: var(--font-md);
+        color: var(--primary-medium);
+      }
+
+      .section-title {
+        font-size: var(--font-lg);
+        font-weight: 600;
+        color: var(--primary-dark);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .divider {
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          var(--gray-500) 0%,
+          transparent 100%
+        );
+      }
+
+      /* Header */
+      .header {
+        margin-bottom: var(--space-xl);
+      }
+
+      .logo-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--gray-500);
+        padding-bottom: var(--space-md);
+        margin-bottom: var(--space-lg);
+      }
+
+      .badge {
+        background: var(--gray-300);
+        padding: var(--space-xs) var(--space-md);
+        border-radius: var(--radius-full);
+        font-size: var(--font-xs);
+        font-weight: 500;
+        color: var(--primary-medium);
+        letter-spacing: 0.5px;
+      }
+
+      .title-lg {
+        font-size: var(--font-4xl);
+        font-weight: 600;
+        color: var(--primary-dark);
+        margin-bottom: var(--space-sm);
+        line-height: 1.2;
+        font-family: "Playfair Display", "Georgia", "Times New Roman", serif;
+      }
+
+      .subtitle {
+        font-size: var(--font-md);
+        color: var(--gray-800);
+        /* border-left: 2px solid var(--gray-600); */
+        max-width: 350px;
+        /* padding-left: var(--space-md); */
+        /* margin: var(--space-sm) 0; */
+      }
+
+      .date {
+        font-size: var(--font-sm);
+        color: var(--gray-700);
+        margin-top: var(--space-md);
+        font-weight: 500;
+      }
+
+      /* Alocação Estratégica - Versão Clara */
+      .allocation-premium-compact {
+        display: flex;
+        gap: var(--space-lg);
+        flex-wrap: wrap;
+        background: var(--gray-100);
+        border-radius: var(--radius-xl);
+        padding: var(--space-lg);
+        border: 1px solid var(--gray-300);
+        align-items: flex-start;
+      }
+
+      .chart-area-compact {
+        flex: 0 0 auto;
+        width: 220px;
+        display: flex;
+        align-items: center;
+      }
+
+      .chart-container-compact {
+        background: white;
+        border-radius: var(--radius-md);
+        padding: var(--space-sm);
+        text-align: center;
+        border: 1px solid var(--gray-300);
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .chart-container-compact img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+        object-fit: contain;
+      }
+
+      .legend-area-compact {
+        flex: 1;
+        min-width: 240px;
+      }
+
+      .allocation-item {
+        margin-bottom: var(--space-md);
+      }
+
+      .allocation-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: var(--space-xs);
+      }
+
+      .allocation-name {
+        font-weight: 600;
+        font-size: var(--font-sm);
+        color: var(--primary-dark);
+      }
+
+      .allocation-percent {
+        font-weight: 600;
+        font-size: var(--font-sm);
+        color: var(--primary-medium);
+      }
+
+      .progress-bar-bg {
+        height: 6px;
+        background: var(--gray-500);
+        border-radius: var(--radius-full);
+        overflow: hidden;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        border-radius: var(--radius-full);
+      }
+
+      /* Cores das Barras de Progresso - Suaves */
+      .progress-fill-posfixado {
+        background: var(--primary-light);
+      }
+      .progress-fill-inflacao {
+        background: var(--secondary-green);
+      }
+      .progress-fill-prefixado {
+        background: var(--secondary-orange);
+      }
+      .progress-fill-multimercado {
+        background: var(--secondary-purple);
+      }
+      .progress-fill-rv-local {
+        background: var(--secondary-red);
+      }
+      .progress-fill-internacional {
+        background: #6f8faa;
+      }
+      .progress-fill-alternativo {
+        background: #9b8aaa;
+      }
+      .progress-fill-default {
+        background: var(--gray-700);
+      }
+
+      /* Objetivos Financeiros */
+      .goal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-md);
+      }
+
+      .goal-card {
+        background: var(--gray-100);
+        border: 1px solid var(--gray-300);
+        border-radius: var(--radius-xl);
+        padding: var(--space-lg);
+        margin-bottom: var(--space-md);
+        page-break-inside: avoid;
+      }
+
+      .goal-title {
+        font-size: var(--font-md);
+        font-weight: 600;
+        color: var(--primary-dark);
+        margin-bottom: var(--space-md);
+        text-transform: uppercase;
+      }
+
+      .goal-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+      }
+
+      .goal-metrics .data-row {
+        flex: 1;
+        padding: var(--space-sm) var(--space-md);
+        white-space: nowrap;
+        justify-content: space-between;
+      }
+
+      .goal-metrics .data-row .data-label {
+        font-size: var(--font-sm);
+        margin-right: var(--space-xs);
+      }
+
+      .goal-metrics .data-row .data-value {
+        font-size: var(--font-sm);
+        font-weight: 600;
+      }
+
+      .goal-graph-area {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--space-xs);
+        border: 1px solid var(--gray-300);
+        text-align: center;
+        margin: var(--space-md) 0;
+        overflow: hidden;
+      }
+
+      .goal-graph-area img {
+        max-width: 100%;
+        max-height: 240px;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+      }
+
+      .status-chip {
+        display: inline-block;
+        padding: var(--space-sm) var(--space-md);
+        border-radius: var(--radius-full);
+        font-size: var(--font-xs);
+        font-weight: 600;
+      }
+
+      .status-success {
+        background: var(--success-bg);
+        color: var(--success-text);
+        border: 1px solid var(--success-border);
+      }
+
+      .status-warning {
+        background: var(--warning-bg);
+        color: var(--warning-text);
+        border: 1px solid var(--warning-border);
+      }
+
+      .observation-note {
+        background: var(--gray-100);
+        border: 1px solid var(--gray-300);
+        padding: var(--space-sm) var(--space-md);
+        margin-bottom: var(--space-md);
+        border-radius: var(--radius-lg);
+        display: inline-block;
+        width: auto;
+      }
+
+      .observation-note-content {
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .observation-note-text {
+        font-size: var(--font-sm);
+        color: var(--primary-dark);
+        font-weight: 500;
+        line-height: 1.4;
+      }
+
+      /* Proteção Patrimonial */
+      .protection-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-md);
+        align-items: stretch;
+      }
+
+      .insurance-card {
+        background: white;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--gray-300);
+        padding: var(--space-md);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .insurance-card ul {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+      }
+
+      .list-item {
+        display: flex;
+        align-items: center;
+        font-size: var(--font-sm);
+        color: var(--gray-800);
+      }
+
+      .list-item::before {
+        content: "•";
+        font-weight: bold;
+        color: var(--primary-light);
+        padding-right: var(--space-xs);
+      }
+
+      .alert-warning {
+        background: var(--warning-bg);
+        border-left: 3px solid var(--secondary-orange);
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
+        margin-top: var(--space-md);
+      }
+
+      /* Footer */
+      .footer {
+        position: running(footer);
+        margin-top: var(--space-lg);
+        padding-top: var(--space-xs);
+        border-top: 1px solid var(--gray-500);
+        font-size: var(--font-xs);
+        color: var(--gray-700);
+        text-align: center;
+      }
+
+      .page-number::before {
+        content: "Página " counter(page);
+      }
+
+      /* Media Print */
+      @media print {
+        body {
+          background: white;
+        }
+        .card-stats,
+        .goal-card,
+        .allocation-premium-compact {
+          break-inside: avoid;
+        }
+        .section {
+          break-inside: avoid;
+        }
+      }
+
+      /* Responsividade */
+      @media (max-width: 768px) {
+        .grid-3,
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+
+        .protection-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .allocation-premium-compact {
+          flex-direction: column;
+        }
+
+        .chart-area-compact {
+          width: 100%;
+          max-width: 280px;
+          margin: 0 auto;
+        }
+
+        .goal-metrics {
+          flex-direction: column;
+        }
+
+        .goal-metrics .data-row {
+          white-space: normal;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="logo-section">
+        <div class="logo">
+          <img
+            src="onboarding/templates/images/selezione-safra.png"
+            alt="Selezione Investimentos"
+            style="height: 30px; width: auto"
+          />
+        </div>
+        <div class="badge">WEALTH MANAGEMENT</div>
+      </div>
+      <div class="title-lg">
+        Relatório de Perfil <br />
+        Financeiro
+      </div>
+      <div class="subtitle">
+        Análise completa do perfil de investidor, estratégia de alocação e
+        recomendações personalizadas.
+      </div>
+      <div class="date">{{ data_atual|default:"MARÇO 2026" }}</div>
+    </div>
+
+    <!-- Dados Cadastrais -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Dados Cadastrais</div>
+        <div class="divider"></div>
+      </div>
+      <div class="grid-3">
+        <div class="data-row">
+          <span class="data-label">NOME:</span>
+          <span class="data-value">{{ cliente.nome }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">IDADE:</span>
+          <span class="data-value">{{ cliente.idade }} anos</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">PROFISSÃO:</span>
+          <span class="data-value">{{ cliente.profissao }}</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">ESTADO CIVIL:</span>
+          <span class="data-value">{{ cliente.estado_civil }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumo Financeiro -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Resumo Financeiro</div>
+        <div class="divider"></div>
+      </div>
+      <div class="grid-3">
+        <div class="card-stats">
+          <span class="data-label">CAPACIDADE DE POUPANÇA</span>
+          <div
+            class="stat-value"
+            style="display: flex; flex-direction: column; gap: var(--space-xs)"
+          >
+            <span>{{ capacidade_mensal }}</span>
+            <span class="data-label" style="font-size: var(--font-xs)"
+              >mensal</span
+            >
+          </div>
+        </div>
+        <div class="card-stats">
+          <span class="data-label">CAPACIDADE ANUAL</span>
+          <div
+            class="stat-value"
+            style="display: flex; flex-direction: column; gap: var(--space-xs)"
+          >
+            <span>{{ capacidade_anual }}</span>
+            <span class="data-label" style="font-size: var(--font-xs)"
+              >projeção em 12 meses</span
+            >
+          </div>
+        </div>
+        <div class="card-stats">
+          <span class="data-label">PERFIL DO INVESTIDOR</span>
+          <div
+            class="stat-value"
+            style="display: flex; flex-direction: column; gap: var(--space-xs)"
+          >
+            <span class="perfil-tag">{{ perfil|upper }}</span>
+            <span class="data-label" style="font-size: var(--font-xs)"
+              >baseado no questionário suitability</span
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alocação Estratégica -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Estratégia de Alocação</div>
+        <div class="divider"></div>
+      </div>
+      <div class="allocation-premium-compact">
+        <div class="chart-area-compact">
+          <div class="chart-container-compact">
+            {% if grafico_path %}
+            <img src="{{ grafico_path }}" alt="Gráfico de Alocação" />
+            {% else %}
+            <div style="padding: var(--space-lg); color: var(--gray-700)">
+              Gráfico não disponível
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="legend-area-compact">
+          <div style="margin-bottom: var(--space-sm)">
+            <div class="section-title" style="font-size: var(--font-sm)">
+              ESTRATÉGIA DE ALOCAÇÃO
+            </div>
+            <span class="data-label" style="font-size: var(--font-xs)">
+              Por classe de ativo e objetivo estratégico
+            </span>
+          </div>
+          {% for aloc in alocacoes %}
+          <div class="allocation-item">
+            <div class="allocation-header">
+              <span class="allocation-name">{{ aloc.nome }}</span>
+              <span class="allocation-percent">{{ aloc.percentual }}</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div
+                class="progress-bar-fill {% if 'Pós-Fixado' in aloc.nome or 'CDI' in aloc.nome %}progress-fill-posfixado {% elif 'Inflação' in aloc.nome or 'IPCA' in aloc.nome %}progress-fill-inflacao {% elif 'Prefixado' in aloc.nome or 'Pré' in aloc.nome %}progress-fill-prefixado {% elif 'Multi' in aloc.nome or 'Multimercado' in aloc.nome %}progress-fill-multimercado {% elif 'RV Local' in aloc.nome or 'Ações' in aloc.nome or 'Renda Variável' in aloc.nome %}progress-fill-rv-local {% elif 'Internacional' in aloc.nome %}progress-fill-internacional {% elif 'Alternativo' in aloc.nome %}progress-fill-alternativo {% else %}progress-fill-default{% endif %}"
+                style="width: {{ aloc.percentual|cut:'%' }}%"
+              ></div>
+            </div>
+          </div>
+          {% endfor %}
+          <div
+            class="data-label"
+            style="
+              margin-top: var(--space-sm);
+              padding-top: var(--space-xs);
+              border-top: 1px solid var(--gray-500);
+              font-size: var(--font-xs);
+            "
+          >
+            Recomendação baseada no perfil {{ perfil }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Objetivos Financeiros -->
+    <div class="section" style="page-break-before: always">
+      <div class="section-header">
+        <div class="section-title">Objetivos Financeiros</div>
+        <div class="divider"></div>
+      </div>
+
+      <div class="observation-note">
+        <div class="observation-note-content">
+          <span class="observation-note-text">
+            Projeção elaborada com premissa de retorno real de 6% a.a. acima da
+            inflação
+          </span>
+        </div>
+      </div>
+
+      {% if objetivos %} {% for obj in objetivos %}
+      <div class="goal-card">
+        <div class="goal-header">
+          <div class="goal-title">{{ obj.desc }}</div>
+        </div>
+
+        <div class="goal-metrics">
+          <div class="data-row">
+            <span class="data-label">META:</span>
+            <span class="data-value">{{ obj.valor }}</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">PRAZO:</span>
+            <span class="data-value">{{ obj.prazo_meses }}</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">APORTE:</span>
+            <span class="data-value">{{ obj.aporte_mensal_necessario }}</span>
+          </div>
+        </div>
+
+        {% if obj.grafico_path %}
+        <div class="goal-graph-area">
+          <img
+            src="{{ obj.grafico_path }}"
+            alt="Gráfico de evolução - {{ obj.desc }}"
+          />
+        </div>
+        {% endif %}
+
+        <div>
+          <span
+            class="status-chip {% if 'Gap' in obj.gap %}status-warning{% else %}status-success{% endif %}"
+          >
+            {{ obj.gap }}
+          </span>
+        </div>
+      </div>
+      {% endfor %} {% else %}
+      <div class="card" style="text-align: center; padding: var(--space-xl)">
+        <span class="data-label">Nenhum objetivo financeiro cadastrado</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Proteção Patrimonial -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Proteção Patrimonial</div>
+        <div class="divider"></div>
+      </div>
+      <div class="protection-grid">
+        <div class="insurance-card">
+          <div
+            class="section-title"
+            style="font-size: var(--font-sm); margin-bottom: var(--space-sm)"
+          >
+            Coberturas Recomendadas
+          </div>
+          <ul>
+            {% for seguro in seguros %}
+            <li class="list-item">{{ seguro }}</li>
+            {% empty %}
+            <li class="list-item">Nenhum seguro identificado</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="insurance-card">
+          <div
+            class="section-title"
+            style="font-size: var(--font-sm); margin-bottom: auto"
+          >
+            Seguro de vida recomendado
+          </div>
+          <div style="margin-top: auto">
+            <div class="stat-value" style="font-size: var(--font-2xl)">
+              {{ seguro_vida }}
+            </div>
+            <span class="data-label" style="font-size: var(--font-xs)">
+              equivalente a 20% do patrimônio
+            </span>
+          </div>
+        </div>
+      </div>
+      {% if necessidade_sucessao %}
+      <div class="alert-warning">
+        <strong class="data-label">PLANEJAMENTO SUCESSÓRIO</strong>
+        <p style="font-size: var(--font-sm); margin-top: var(--space-xs)">
+          Recomendamos estruturar o planejamento sucessório para garantir a
+          proteção do patrimônio.
+        </p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Eficiência Fiscal -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Eficiência Fiscal</div>
+        <div class="divider"></div>
+      </div>
+      <div class="card">
+        <ul style="list-style: none">
+          {% for eficiencia in eficiencias %}
+          <li class="list-item">{{ eficiencia }}</li>
+          {% empty %}
+          <li class="list-item">Nenhuma recomendação fiscal no momento</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- Relacionamento -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-title">Modelo de Relacionamento</div>
+        <div class="divider"></div>
+      </div>
+      <div
+        class="card"
+        style="
+          background: linear-gradient(105deg, var(--gray-200) 0%, white 100%);
+        "
+      >
+        <p style="font-size: var(--font-base)">{{ texto_atendimento }}</p>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>
+        Selezione Wealth Management • Relatório confidencial • Conforme
+        regulação CVM
+      </div>
+    </div>
+  </body>
+</html>

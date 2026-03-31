@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Relatório de Alocação Estratégica | Selezione Investimentos</title>
+    <link href="./dist/output.css" rel="stylesheet" />
+    <style>
+      @page {
+        size: A4;
+        margin: 2cm;
+        @bottom-center {
+          content: element(footer);
+        }
+      }
+
+      body {
+        font-family:
+          "Inter",
+          "Helvetica Neue",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+
+      .footer {
+        position: running(footer);
+      }
+
+      .page-number::before {
+        content: "Página " counter(page);
+      }
+
+      .progress-bar-bg {
+        background: #e9edf2;
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+      }
+
+      .progress-bar-bg-small {
+        background: #eff3f8;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        background: #0a5c8e;
+        height: 100%;
+        border-radius: 10px;
+      }
+
+      @media print {
+        .break-inside-avoid {
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-white text-gray-800 text-[10.5px] leading-relaxed">
+    <!-- HEADER -->
+    <div class="mb-10">
+      <div
+        class="flex justify-between items-center border-b border-gray-200 pb-2.5 mb-6"
+      >
+        <div
+          class="flex gap-1.5 text-[20px] font-semibold text-gray-900 tracking-tight"
+        >
+          SELEZIONE <span class="font-light text-gray-500">INVESTIMENTOS</span>
+        </div>
+        <div
+          class="bg-gray-100 px-2.5 py-1 rounded-full text-[8px] font-medium text-blue-800"
+        >
+          PRIVATE OFFICE
+        </div>
+      </div>
+      <div class="mt-4 mb-2">
+        <h1
+          class="text-[28px] font-semibold text-gray-900 tracking-tight leading-tight mb-2"
+        >
+          Relatório de Perfil Financeiro
+        </h1>
+        <div class="text-[11px] text-gray-500 border-l-2 border-gray-200 pl-3">
+          Análise completa do perfil de investidor e recomendações estratégicas
+        </div>
+        <div class="text-[9px] text-gray-400 mt-3">
+          {{ data_atual|default:"Março 2026" }}
+        </div>
+      </div>
+    </div>
+
+    <!-- DADOS DO CLIENTE -->
+    <div class="mb-8 break-inside-avoid">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div
+          class="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center text-blue-700 text-xs"
+        >
+          👤
+        </div>
+        <h2 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Dados Cadastrais
+        </h2>
+        <div
+          class="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"
+        ></div>
+      </div>
+      <div
+        class="grid grid-cols-2 gap-3 bg-gray-50/30 p-4 rounded-xl border border-gray-100"
+      >
+        <div class="flex items-baseline gap-2.5">
+          <span
+            class="text-[9px] font-medium text-gray-500 uppercase tracking-wide"
+            >Nome completo</span
+          >
+          <span class="text-[11px] font-medium text-gray-700"
+            >{{ cliente.nome }}</span
+          >
+        </div>
+        <div class="flex items-baseline gap-2.5">
+          <span
+            class="text-[9px] font-medium text-gray-500 uppercase tracking-wide"
+            >Idade</span
+          >
+          <span class="text-[11px] font-medium text-gray-700"
+            >{{ cliente.idade }} anos</span
+          >
+        </div>
+        <div class="flex items-baseline gap-2.5">
+          <span
+            class="text-[9px] font-medium text-gray-500 uppercase tracking-wide"
+            >Profissão</span
+          >
+          <span class="text-[11px] font-medium text-gray-700"
+            >{{ cliente.profissao }}</span
+          >
+        </div>
+        <div class="flex items-baseline gap-2.5">
+          <span
+            class="text-[9px] font-medium text-gray-500 uppercase tracking-wide"
+            >Estado civil</span
+          >
+          <span class="text-[11px] font-medium text-gray-700"
+            >{{ cliente.estado_civil }}</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- RESUMO FINANCEIRO -->
+    <div class="mb-8 break-inside-avoid">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div
+          class="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center text-blue-700 text-xs"
+        >
+          📈
+        </div>
+        <h2 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Resumo Financeiro
+        </h2>
+        <div
+          class="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"
+        ></div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="border border-gray-100 rounded-xl p-3.5">
+          <div
+            class="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-2"
+          >
+            Capacidade de poupança
+          </div>
+          <div class="text-xl font-semibold text-gray-900">
+            {{ capacidade }}
+          </div>
+          <div class="text-[8px] text-gray-400 mt-1.5">anual</div>
+        </div>
+        <div class="border border-gray-100 rounded-xl p-3.5">
+          <div
+            class="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-2"
+          >
+            Patrimônio total
+          </div>
+          <div class="text-xl font-semibold text-gray-900">
+            {{ patrimonio }}
+          </div>
+          <div class="text-[8px] text-gray-400">financeiro + imobiliário</div>
+        </div>
+        <div class="border border-gray-100 rounded-xl p-3.5">
+          <div
+            class="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-2"
+          >
+            Perfil do investidor
+          </div>
+          <div class="text-xl font-semibold text-gray-900">
+            <span
+              class="inline-block bg-gray-900 text-white px-3 py-1 rounded-full text-[10px] font-medium"
+              >{{ perfil|upper }}</span
+            >
+          </div>
+          <div class="text-[8px] text-gray-400 mt-1.5">
+            com base no questionário
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ALOCAÇÃO ESTRATÉGICA -->
+    <div class="mb-8 break-inside-avoid">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div
+          class="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center text-blue-700 text-xs"
+        >
+          📊
+        </div>
+        <h2 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Estratégia de Alocação
+        </h2>
+        <div
+          class="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"
+        ></div>
+      </div>
+      <div
+        class="flex gap-8 flex-wrap bg-gray-50/30 rounded-xl p-6 border border-gray-100"
+      >
+        <div class="flex-1 min-w-[260px] flex flex-col">
+          <div
+            class="bg-white rounded-lg p-4 text-center border border-gray-100 flex-1 flex flex-col justify-center items-center"
+          >
+            {% if grafico_path %}
+            <img
+              src="file://{{ grafico_path }}"
+              alt="Gráfico de Alocação"
+              class="w-full h-auto max-h-[220px] object-contain rounded-lg"
+            />
+            {% else %}
+            <div class="py-5 text-center text-[10px] text-gray-500">
+              Gráfico não disponível
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="flex-1 flex flex-col justify-center">
+          <div class="mb-3">
+            <h3 class="text-[11px] font-semibold text-gray-900 mb-0.5">
+              ESTRATÉGIA DE ALOCAÇÃO
+            </h3>
+            <p class="text-[8px] text-gray-500">
+              Por classe de ativo e objetivo estratégico
+            </p>
+          </div>
+          <div class="flex flex-col gap-3">
+            {% for aloc in alocacoes %}
+            <div
+              class="border-b border-gray-100 pb-2.5 last:border-0 last:pb-0"
+            >
+              <div class="flex justify-between mb-1">
+                <span class="font-bold text-[10px] text-gray-900"
+                  >{{ aloc.nome }}</span
+                >
+                <span class="font-bold text-[10px] text-blue-600"
+                  >{{ aloc.percentual }}</span
+                >
+              </div>
+              <div class="progress-bar-bg h-[3px] mt-1.5">
+                <div
+                  class="progress-bar-fill"
+                  style="width: {{ aloc.percentual|cut:'%' }}%; background: 
+                {% if 'Pós' in aloc.nome or 'CDI' in aloc.nome %}#2C7DA0
+                {% elif 'IPCA' in aloc.nome %}#1E7F6E
+                {% elif 'Pré' in aloc.nome %}#E6A017
+                {% elif 'Multi' in aloc.nome %}#8C6BBE
+                {% elif 'Ações' in aloc.nome %}#E05A47
+                {% else %}#5F7F9E{% endif %}"
+                ></div>
+              </div>
+              <div class="text-[8px] text-gray-500 mt-0.5">
+                {% if 'Pós' in aloc.nome or 'CDI' in aloc.nome %}Maior segurança
+                e liquidez imediata {% elif 'IPCA' in aloc.nome %}Proteção
+                contra inflação de longo prazo {% elif 'Pré' in aloc.nome
+                %}Retorno prefixado garantido {% elif 'Multi' in aloc.nome
+                %}Diversificação e gestão ativa {% elif 'Ações' in aloc.nome
+                %}Potencial de valorização no longo prazo {% else %}Alocação
+                estratégica recomendada{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <div
+            class="text-[7px] text-gray-400 mt-4 pt-2.5 border-t border-gray-100"
+          >
+            * Recomendação baseada no perfil {{ perfil }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBJETIVOS FINANCEIROS -->
+    <div class="mb-8 break-inside-avoid">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div
+          class="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center text-blue-700 text-xs"
+        >
+          🎯
+        </div>
+        <h2 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Objetivos Financeiros
+        </h2>
+        <div
+          class="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"
+        ></div>
+      </div>
+      {% if objetivos %}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        {% for obj in objetivos %}
+        <div class="border border-gray-100 rounded-xl p-3.5 bg-white">
+          <div class="font-bold text-xs text-gray-900 mb-2.5">
+            {{ obj.desc }}
+          </div>
+          <div class="flex justify-between text-[9px] mb-1.5">
+            <span class="text-gray-500">Meta:</span>
+            <span class="font-medium text-gray-800">{{ obj.valor }}</span>
+          </div>
+          <div class="flex justify-between text-[9px] mb-1.5">
+            <span class="text-gray-500">Prazo:</span>
+            <span class="font-medium text-gray-800"
+              >{{ obj.prazo_meses }} meses</span
+            >
+          </div>
+          <div class="flex justify-between text-[9px] mb-2.5">
+            <span class="text-gray-500">Aporte anual:</span>
+            <span class="font-medium text-gray-800">{{ obj.aporte }}</span>
+          </div>
+          <div class="my-2.5">
+            <div class="flex justify-between text-[8px] text-gray-500 mb-0.5">
+              <span>Status</span>
+              <span
+                >{% if 'Gap' in obj.gap %}Necessário ajuste{% else %}No
+                caminho{% endif %}</span
+              >
+            </div>
+            <div class="progress-bar-bg-small h-1">
+              <div
+                class="progress-fill"
+                style="width: {% if 'Gap' in obj.gap %}60{% else %}85{% endif %}%;"
+              ></div>
+            </div>
+          </div>
+          <div>
+            <span
+              class="inline-block text-[8px] font-semibold px-2 py-0.5 rounded-full {% if 'Gap' in obj.gap %}bg-amber-50 text-amber-700{% else %}bg-green-50 text-green-700{% endif %}"
+            >
+              {{ obj.gap|truncatechars:55 }}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div
+        class="py-7.5 text-center bg-gray-50/50 rounded-xl border border-gray-100 text-[10px] text-gray-500"
+      >
+        Nenhum objetivo financeiro cadastrado
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- PROTEÇÃO PATRIMONIAL -->
+    <div class="mb-8 break-inside-avoid">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div
+          class="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center text-blue-700 text-xs"
+        >
+          🛡️
+        </div>
+        <h2 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Proteção Patrimonial
+        </h2>
+        <div
+          class="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"
+        ></div>
+      </div>
+      <div class="flex flex-wrap gap-4">
+        <div
+          class="flex-1 bg-gray-50/30 rounded-xl border border-gray-100 p-3.5"
+        >
+          <div class="font-semibold text-[11px] text-gray-900">
+            Coberturas atuais
+          </div>
+          <ul class="list-none p-0 mt-2">
+            {% for seguro in seguros %}
+            <li
+              class="py-1.5 border-b border-gray-100 text-[9.5px] flex items-center gap-1.5"
+            >
+              <span class="text-blue-600 text-xs">•</span> {{ seguro }}
+            </li>
+            {% empty %}
+            <li class="py-1.5 text-[9.5px] text-gray-500">
+              Nenhum seguro identificado
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div
+          class="flex-1 bg-gray-50/30 rounded-xl border border-gray-100 p-3.5 flex flex-col"
+        >
+          <div class="mb-auto">
+            <span class="text-[11px] font-semibold text-gray-900"
+              >Seguro de vida recomendado</span
+            >
+          </div>
+          <div class="text-lg font-semibold text-gray-900">
+            {{ seguro_vida }}
+          </div>
+          <div class="text-[8px] text-gray-500">
+            equivalente a 20% do patrimônio
+          </div>
+        </div>
+      </div>
+      {% if necessidade_sucessao %}
+      <div
+        class="mt-4 bg-amber-50/30 border-l-4 border-amber-500 p-3 rounded-lg"
+      >
+        <strong class="text-[9px] text-amber-800 uppercase tracking-wide"
+          >Planejamento sucessório</strong
+        >
+        <p class="text-[9px] text-amber-700/80 mt-1">
+          Recomendamos estruturar o planejamento sucessório para garantir a
+          proteção do patrimônio e facilitar a transmissão de bens aos
+          herdeiros.
+        </p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- EFICIÊNCIA FISCAL -->
+    <div class="mb-8 break-inside-avoid">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div
+          class="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center text-blue-700 text-xs"
+        >
+          📑
+        </div>
+        <h2 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Eficiência Fiscal
+        </h2>
+        <div
+          class="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"
+        ></div>
+      </div>
+      <div class="bg-gray-50/30 rounded-xl border border-gray-100 p-3.5">
+        <ul class="list-none p-0">
+          {% for eficiencia in eficiencias %}
+          <li
+            class="py-1.5 border-b border-gray-100 last:border-0 text-[9.5px] flex items-center gap-1.5"
+          >
+            <span class="text-blue-600 text-xs">•</span> {{ eficiencia }}
+          </li>
+          {% empty %}
+          <li class="py-1.5 text-[9.5px] text-gray-500">
+            Nenhuma recomendação fiscal no momento
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <!-- RELACIONAMENTO -->
+    <div class="mb-8 break-inside-avoid">
+      <div class="flex items-center gap-2.5 mb-4">
+        <div
+          class="w-6 h-6 bg-blue-50 rounded-md flex items-center justify-center text-blue-700 text-xs"
+        >
+          🤝
+        </div>
+        <h2 class="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Modelo de Relacionamento
+        </h2>
+        <div
+          class="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent"
+        ></div>
+      </div>
+      <div
+        class="bg-gradient-to-br from-gray-50 to-white rounded-xl p-4.5 border border-gray-100"
+      >
+        <p class="text-[10px] leading-relaxed text-gray-700">
+          {{ texto_atendimento }}
+        </p>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div
+      class="footer mt-6 pt-3 border-t border-gray-100 text-[7px] text-gray-400 text-center"
+    >
+      <div>
+        Selezione Wealth Management • Relatório confidencial • Conforme
+        regulação CVM
+      </div>
+      <div class="page-number"></div>
+    </div>
+  </body>
+</html>
