@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 from onboarding.models import FormSubmission
+from django.core.cache import cache  # ← ADICIONE ESTA LINHA
 import json
 from datetime import date
 
@@ -71,18 +72,30 @@ class SubmissionWithScoreSerializer(serializers.Serializer):
             return None
     
     def get_score(self, instance):
-        """Calcula e retorna o score do usuário"""
+        """Calcula e retorna o score do usuário com CACHE"""
         try:
+            # Gera uma chave de cache única baseada no ID e data de modificação
+            cache_key = f"score_user_{instance.id}_{instance.Criado_Em}"
+            
+            # 🔥 Tenta pegar do cache primeiro
+            cached_score = cache.get(cache_key)
+            if cached_score:
+                return cached_score
+            
+            # Se não tiver cache, calcula o score
             form_data = self._get_form_data_for_score(instance)
             if form_data:
                 score_data = calculate_score(form_data)
                 if score_data:
-                    return {
+                    result = {
                         'total': score_data.get('total', 0),
                         'profile': score_data.get('profile', 'Não definido'),
                         'breakdown': score_data.get('breakdown', {}),
                         'details': score_data.get('details', {}),
                     }
+                    # 💾 Salva no cache por 1 hora (3600 segundos)
+                    cache.set(cache_key, result, 3600)
+                    return result
         except Exception as e:
             # Log do erro silencioso, não falha o serializer
             pass
