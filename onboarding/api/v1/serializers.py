@@ -5,6 +5,7 @@ from onboarding.models import FormSubmission
 from django.core.cache import cache
 import json
 import logging
+import sys  # ← ADICIONE
 from datetime import date
 
 from .score_engine import calculate_score
@@ -30,10 +31,6 @@ class FormSubmissionSerializer(serializers.ModelSerializer):
 
 
 class SubmissionWithScoreSerializer(serializers.Serializer):
-    """
-    Serializer que retorna os dados do FormSubmission com score embutido.
-    Mais eficiente que fazer chamadas separadas.
-    """
     id = serializers.IntegerField()
     Nome = serializers.CharField(allow_null=True)
     email = serializers.EmailField(source='user.email', read_only=True)
@@ -45,17 +42,21 @@ class SubmissionWithScoreSerializer(serializers.Serializer):
     missing_fields = serializers.SerializerMethodField()
     
     def get_score(self, instance):
-        """Calcula e retorna o score do usuário - MESMA LÓGICA DO ENDPOINT /score/"""
+        """Calcula e retorna o score do usuário"""
         try:
-            # Gera uma chave de cache única
-            cache_key = f"score_user_{instance.id}_{instance.Criado_Em}"
+            # 🔥 LOG PARA DEBUG (vai aparecer nos logs do Render)
+            print(f"\n🔍 Calculando score para usuário {instance.id} - {instance.Nome}", file=sys.stderr)
+            print(f"   CPF: {instance.CPF}", file=sys.stderr)
+            print(f"   Nascimento: {instance.Nascimento}", file=sys.stderr)
             
-            # Tenta pegar do cache primeiro
+            # Cache key
+            cache_key = f"score_user_{instance.id}_{instance.Criado_Em}"
             cached_score = cache.get(cache_key)
             if cached_score:
+                print(f"   ✅ Score veio do cache", file=sys.stderr)
                 return cached_score
             
-            # 🔥 USA EXATAMENTE A MESMA LÓGICA DO ENDPOINT /score/ QUE FUNCIONA
+            # Mesma lógica do endpoint /score/
             main_focus = instance.Objetivos
             if isinstance(main_focus, str):
                 try:
@@ -79,42 +80,35 @@ class SubmissionWithScoreSerializer(serializers.Serializer):
                 "mainFocus": main_focus,
             }
             
-            # Chama a mesma função que o endpoint /score/ usa
+            print(f"   Form data preparado", file=sys.stderr)
+            
+            # Chama a função de score
             score_data = calculate_score(form_data)
             
+            print(f"   Score calculado: {score_data}", file=sys.stderr)
+            
             if score_data:
-                # 🔥 MANTÉM O MESMO FORMATO QUE O ENDPOINT /score/ RETORNA
-                result = {
-                    'total': score_data.get('total', 0),
-                    'profile': score_data.get('profile', 'Não definido'),
-                    'breakdown': score_data.get('breakdown', {}),
-                    'description': score_data.get('description', []),
-                    'levels': score_data.get('levels', {})
-                }
-                # Salva no cache por 1 hora
-                cache.set(cache_key, result, 3600)
-                return result
+                cache.set(cache_key, score_data, 3600)
+                return score_data
             else:
-                logger.warning(f"score_data é None para usuário {instance.id}")
+                print(f"   ⚠️ score_data é None!", file=sys.stderr)
                 return None
                 
         except Exception as e:
-            logger.error(f"Erro ao calcular score para {instance.id}: {e}", exc_info=True)
+            print(f"❌ ERRO: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc(file=sys.stderr)
             return None
     
     def get_is_complete(self, instance):
-        """Verifica se o cadastro está completo"""
         required_fields = ['Nome', 'CPF', 'Nascimento']
         for field in required_fields:
             if not getattr(instance, field, None):
                 return False
-        
-        # Verifica se tem score calculado
         score = self.get_score(instance)
         return score is not None
     
     def get_missing_fields(self, instance):
-        """Retorna lista de campos obrigatórios faltando"""
         required_fields = ['Nome', 'CPF', 'Nascimento']
         missing = []
         for field in required_fields:
