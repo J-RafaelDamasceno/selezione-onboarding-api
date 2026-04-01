@@ -1,3 +1,5 @@
+# onboarding/api/v1/views.py
+
 import logging 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
@@ -9,7 +11,7 @@ import os
 from datetime import date
 
 from onboarding.models import FormSubmission
-from onboarding.api.v1.serializers import FormSubmissionSerializer
+from onboarding.api.v1.serializers import FormSubmissionSerializer, SubmissionWithScoreSerializer
 from .score_engine import calculate_score
 
 logger = logging.getLogger(__name__)
@@ -91,6 +93,25 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
         print("FORM DATA:", form_data)
         score = calculate_score(form_data)
         return Response(score)
+
+    # NOVO ENDPOINT OTIMIZADO: usa o serializer para retornar dados com scores
+    @action(detail=False, methods=["get"], url_path="with-scores")
+    def list_with_scores(self, request):
+        """
+        Retorna todos os submissions do usuário com scores já calculados.
+        Mais eficiente que fazer 1 + N chamadas separadas.
+        """
+        try:
+            submissions = self.get_queryset()
+            serializer = SubmissionWithScoreSerializer(submissions, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Erro em list_with_scores: {e}", exc_info=True)
+            return Response(
+                {"success": False, "error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
     @action(detail=True, methods=["get"], url_path="relatorio")
     def relatorio(self, request, pk=None):
