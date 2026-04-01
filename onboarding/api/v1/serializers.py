@@ -83,11 +83,13 @@ class SubmissionWithScoreSerializer(serializers.Serializer):
             score_data = calculate_score(form_data)
             
             if score_data:
+                # 🔥 MANTÉM O MESMO FORMATO QUE O ENDPOINT /score/ RETORNA
                 result = {
                     'total': score_data.get('total', 0),
                     'profile': score_data.get('profile', 'Não definido'),
                     'breakdown': score_data.get('breakdown', {}),
-                    'details': score_data.get('details', {}),
+                    'description': score_data.get('description', []),
+                    'levels': score_data.get('levels', {})
                 }
                 # Salva no cache por 1 hora
                 cache.set(cache_key, result, 3600)
