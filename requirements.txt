@@ -10,4 +10,3 @@ Pillow==10.4.0
 matplotlib==3.9.4
 weasyprint==61.2
 pydyf==0.8.0
-django-redis==5.4.0

@@ -69,7 +69,7 @@ MIDDLEWARE = [
 # ============================================
 # CORS CONFIGURATION
 # ============================================
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'https://selezione-onboarding.vercel.app').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
 # ============================================
