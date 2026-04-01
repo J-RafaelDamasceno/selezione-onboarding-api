@@ -2,12 +2,15 @@
 
 from rest_framework import serializers
 from onboarding.models import FormSubmission
-from django.core.cache import cache  # ← ADICIONE ESTA LINHA
+from django.core.cache import cache
 import json
+import logging  # ← ADICIONE ESTA LINHA
 from datetime import date
 
-# Importe sua função de score
 from .score_engine import calculate_score
+
+# 🔥 ADICIONE ESTE LOGGER
+logger = logging.getLogger(__name__)
 
 
 class FormSubmissionSerializer(serializers.ModelSerializer):
@@ -68,24 +71,36 @@ class SubmissionWithScoreSerializer(serializers.Serializer):
                 "preference": instance.Preferencia,
                 "mainFocus": main_focus,
             }
-        except Exception:
+        except Exception as e:
+            logger.error(f"Erro em _get_form_data_for_score: {e}")
             return None
     
     def get_score(self, instance):
         """Calcula e retorna o score do usuário com CACHE"""
         try:
-            # Gera uma chave de cache única baseada no ID e data de modificação
+            # Gera uma chave de cache única
             cache_key = f"score_user_{instance.id}_{instance.Criado_Em}"
             
-            # 🔥 Tenta pegar do cache primeiro
+            # Tenta pegar do cache primeiro
             cached_score = cache.get(cache_key)
             if cached_score:
+                logger.info(f"Score do usuário {instance.id} veio do cache")
                 return cached_score
             
-            # Se não tiver cache, calcula o score
+            # 🔥 LOG: tentando calcular score
+            logger.info(f"Calculando score para usuário {instance.id} - {instance.Nome}")
+            
             form_data = self._get_form_data_for_score(instance)
+            
+            # 🔥 LOG: dados do formulário
+            logger.debug(f"Form data: {form_data}")
+            
             if form_data:
                 score_data = calculate_score(form_data)
+                
+                # 🔥 LOG: resultado do cálculo
+                logger.info(f"Score calculado para {instance.id}: {score_data}")
+                
                 if score_data:
                     result = {
                         'total': score_data.get('total', 0),
@@ -93,23 +108,25 @@ class SubmissionWithScoreSerializer(serializers.Serializer):
                         'breakdown': score_data.get('breakdown', {}),
                         'details': score_data.get('details', {}),
                     }
-                    # 💾 Salva no cache por 1 hora (3600 segundos)
                     cache.set(cache_key, result, 3600)
                     return result
+                else:
+                    logger.warning(f"score_data é None para usuário {instance.id}")
+            else:
+                logger.warning(f"form_data é None para usuário {instance.id}")
+                
         except Exception as e:
-            # Log do erro silencioso, não falha o serializer
-            pass
+            # 🔥 LOG do erro completo
+            logger.error(f"Erro ao calcular score para {instance.id}: {e}", exc_info=True)
         return None
     
     def get_is_complete(self, instance):
         """Verifica se o cadastro está completo"""
-        # Campos obrigatórios
         required_fields = ['Nome', 'CPF', 'Nascimento']
         for field in required_fields:
             if not getattr(instance, field, None):
                 return False
         
-        # Verifica se tem score calculado
         return self.get_score(instance) is not None
     
     def get_missing_fields(self, instance):
