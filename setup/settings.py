@@ -75,6 +75,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 
 # Se quiser deixar a URL fixa principal também
 CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
     "https://selezione-onboarding.vercel.app",
 ]
 
