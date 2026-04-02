@@ -77,6 +77,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://selezione-onboarding.vercel.app",
+    "https://onboarding.selezioneinvestimentos.com.br",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
