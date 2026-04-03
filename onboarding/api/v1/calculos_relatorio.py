@@ -3,7 +3,7 @@
 import logging
 import math
 from datetime import date
-from typing import Any
+from typing import Any, List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -135,15 +135,158 @@ def calcular_aporte_mensal_necessario(valor_meta: float, prazo_meses: int, taxa_
     return valor_meta / prazo_meses
 
 
-def calcular_tempo_para_meta(valor_meta: float, aporte_mensal: float, taxa_anual: float = TAXA_JUROS_ANUAL) -> int:
+def calcular_tempo_para_meta(valor_meta: float, aporte_mensal: float, taxa_anual: float = TAXA_JUROS_ANUAL) -> float:
     """Calcula quantos meses são necessários para atingir a meta com um aporte mensal fixo."""
     if aporte_mensal <= 0 or valor_meta <= 0:
-        return 999
+        return 999.0
     taxa_mensal = (1 + taxa_anual) ** (1 / 12) - 1
     if taxa_mensal > 0:
-        n = math.log((valor_meta * taxa_mensal / aporte_mensal) + 1) / math.log(1 + taxa_mensal)
-        return int(math.ceil(n))
-    return int(math.ceil(valor_meta / aporte_mensal))
+        try:
+            n = math.log((valor_meta * taxa_mensal / aporte_mensal) + 1) / math.log(1 + taxa_mensal)
+            return round(n, 2)  # ✅ Correto: ex: 7.10
+        except (ValueError, ZeroDivisionError):
+            return valor_meta / aporte_mensal
+    return valor_meta / aporte_mensal
+
+
+def calcular_serie_mensal(
+    meta: float, 
+    aporte_mensal: float, 
+    prazo_meses: int, 
+    taxa_anual: float = TAXA_JUROS_ANUAL
+) -> List[float]:
+    """
+    Calcula a evolução mensal do patrimônio até o prazo.
+    Retorna uma lista com os valores mês a mês (incluindo mês 0 = 0).
+    
+    Args:
+        meta: Valor objetivo da meta
+        aporte_mensal: Valor investido por mês
+        prazo_meses: Número total de meses do prazo
+        taxa_anual: Taxa de juros anual (padrão: 6%)
+    
+    Returns:
+        Lista de valores para cada mês [mês0, mês1, mês2, ..., mêsN]
+    """
+    if prazo_meses <= 0:
+        return [0.0]
+    
+    taxa_mensal = (1 + taxa_anual) ** (1 / 12) - 1
+    serie = [0.0]  # Mês 0 (hoje)
+    acumulado = 0.0
+    
+    for mes in range(1, prazo_meses + 1):
+        # Aplica rendimento do mês + aporte
+        acumulado = acumulado * (1 + taxa_mensal) + aporte_mensal
+        serie.append(acumulado)
+    
+    return serie
+
+
+def calcular_series_objetivo(
+    valor_meta: float, 
+    aporte_atual_mensal: float, 
+    prazo_meses: int,
+    taxa_anual: float = TAXA_JUROS_ANUAL
+) -> Dict[str, Any]:
+    """
+    Calcula as duas séries para o gráfico e métricas do objetivo.
+    
+    Returns:
+        Dict com:
+        - serie_necessaria: evolução com o aporte necessário
+        - serie_real: evolução com o aporte atual do cliente
+        - aporte_necessario: valor do aporte mensal necessário
+        - tempo_real_meses: meses necessários com aporte atual
+        - alcancavel: se é possível atingir a meta no prazo
+    """
+    # Calcula o aporte necessário para bater a meta no prazo
+    aporte_necessario = calcular_aporte_mensal_necessario(
+        valor_meta, prazo_meses, taxa_anual
+    )
+    
+    # Calcula as séries mensais
+    serie_necessaria = calcular_serie_mensal(
+        valor_meta, aporte_necessario, prazo_meses, taxa_anual
+    )
+    
+    serie_real = calcular_serie_mensal(
+        valor_meta, aporte_atual_mensal, prazo_meses, taxa_anual
+    )
+    
+    # Calcula tempo real para atingir a meta com aporte atual
+    tempo_real_meses = calcular_tempo_para_meta(valor_meta, aporte_atual_mensal, taxa_anual)
+    
+    # Verifica se é alcançável no prazo
+    alcancavel = tempo_real_meses <= prazo_meses if aporte_atual_mensal > 0 else False
+    
+    return {
+        "serie_necessaria": [round(v, 2) for v in serie_necessaria],
+        "serie_real": [round(v, 2) for v in serie_real],
+        "aporte_necessario": aporte_necessario,
+        "tempo_real_meses": tempo_real_meses,
+        "alcancavel": alcancavel
+    }
+
+
+def processar_objetivos(objetivos_raw: List[dict], capacidade_mensal: float, taxa_anual: float = TAXA_JUROS_ANUAL) -> List[dict]:
+    """
+    Processa a lista de objetivos, adicionando as séries temporais e métricas calculadas.
+    
+    Args:
+        objetivos_raw: Lista de objetivos brutos do formulário
+        capacidade_mensal: Capacidade de poupança mensal do cliente
+        taxa_anual: Taxa de juros anual
+    
+    Returns:
+        Lista de objetivos enriquecidos com séries e métricas
+    """
+    objetivos_completos = []
+    
+    for obj in objetivos_raw:
+        valor_meta = to_float(obj.get('valor', obj.get('value', 0)))
+        prazo_meses = int(obj.get('months', obj.get('prazo_meses', obj.get('prazo', 12))))
+        descricao = obj.get('desc', obj.get('description', 'Objetivo Financeiro'))
+        
+        # Pula objetivos sem valor definido
+        if valor_meta <= 0:
+            continue
+        
+        # Calcula as séries e métricas
+        series_data = calcular_series_objetivo(
+            valor_meta=valor_meta,
+            aporte_atual_mensal=capacidade_mensal,
+            prazo_meses=prazo_meses,
+            taxa_anual=taxa_anual
+        )
+        
+        # Calcula o gap para exibição
+        aporte_necessario = series_data["aporte_necessario"]
+        gap_mensal = aporte_necessario - capacidade_mensal
+        
+        # Determina status do gap
+        if gap_mensal <= 0:
+            gap_texto = f"Folga de {formatar_br(abs(gap_mensal))}/mês"
+        else:
+            gap_texto = f"Gap de {formatar_br(gap_mensal)}/mês"
+        
+        # Monta o objetivo completo
+        objetivo_completo = {
+            "desc": descricao,
+            "valor": valor_meta,
+            "valor_formatado": formatar_br(valor_meta),
+            "prazo_meses": prazo_meses,
+            "aporte_mensal_necessario": aporte_necessario,
+            "aporte_mensal_formatado": formatar_br(aporte_necessario),
+            "tempo_real_meses": series_data["tempo_real_meses"],
+            "gap": gap_texto,
+            "alcancavel": series_data["alcancavel"],
+            "serie_necessaria": series_data["serie_necessaria"],
+            "serie_real": series_data["serie_real"],
+        }
+        objetivos_completos.append(objetivo_completo)
+    
+    return objetivos_completos
 
 
 def calcular_gap(objetivo: dict, capacidade_mensal: float, taxa_anual: float = TAXA_JUROS_ANUAL) -> str:
