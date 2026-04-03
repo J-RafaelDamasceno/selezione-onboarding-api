@@ -1,11 +1,10 @@
 # onboarding/api/v1/views.py
-
 import logging 
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.http import FileResponse, HttpResponse
+from django.http import HttpResponse
 import json
 import os
 from datetime import date
@@ -14,9 +13,23 @@ from onboarding.models import FormSubmission
 from onboarding.api.v1.serializers import FormSubmissionSerializer, SubmissionWithScoreSerializer
 from .score_engine import calculate_score
 
+# ✅ NOVO IMPORT - funções de cálculo (sem dependências de PDF)
+from onboarding.api.v1.calculos_relatorio import (
+    determinar_perfil_investidor,
+    calcular_capacidade_poupanca,
+    calcular_aporte_mensal_necessario,
+    calcular_tempo_para_meta,
+    calcular_gap,
+    recomendar_seguros,
+    recomendar_eficiencia_fiscal,
+    gerar_texto_atendimento,
+    formatar_br,
+    to_float,
+    ALOCACOES_POR_PERFIL,
+    TAXA_JUROS_ANUAL,
+)
+
 logger = logging.getLogger(__name__)
-  
-from onboarding.api.v1.relatorio_weasyprint import gerar_relatorio_pdf_weasyprint
 
 
 class FormSubmissionViewSet(viewsets.ModelViewSet):
@@ -94,7 +107,6 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
         score = calculate_score(form_data)
         return Response(score)
 
-    # NOVO ENDPOINT OTIMIZADO: usa o serializer para retornar dados com scores
     @action(detail=False, methods=["get"], url_path="with-scores")
     def list_with_scores(self, request):
         """
@@ -113,88 +125,9 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-    @action(detail=True, methods=["get"], url_path="relatorio")
-    def relatorio(self, request, pk=None):
-        try:
-            submission = self.get_object()
-            
-            cliente = {
-                "nome": submission.Nome,
-                "idade": submission.Nascimento.year if submission.Nascimento else None,
-                "profissao": submission.Profissao_Outro if submission.Profissao == "JOB_OTHER" else submission.get_Profissao_display() if submission.Profissao else "N/A",
-                "estado_civil": submission.get_Estado_Civil_display() if submission.Estado_Civil else "N/A",
-                "tem_filhos": submission.Filhos != "CH_NONE" if submission.Filhos else False,
-            }
-            
-            objetivos = submission.Objetivos
-            if isinstance(objetivos, str):
-                try:
-                    objetivos = json.loads(objetivos)
-                except json.JSONDecodeError:
-                    objetivos = []
-            
-            form_data = {
-                "financialAssets": submission.Patrimonio_Financeiro,
-                "income": submission.Renda_Mensal,
-                "incomeSource": submission.get_Fonte_Renda_display() if submission.Fonte_Renda else "N/A",
-                "realEstateValue": submission.Patrimonio_Imobiliario,
-                "realEstateCount": submission.Qtd_Imoveis,
-                "succession": submission.get_Sucessao_display() if submission.Sucessao else "N/A",
-                "lifeInsurance": submission.get_Seguro_display() if submission.Seguro else "N/A",
-                "disabilityInsurance": submission.get_Seguro_Invalidez_display() if submission.Seguro_Invalidez else "N/A",
-                "corporateStructure": submission.get_Estrutura_Societaria_display() if submission.Estrutura_Societaria else "N/A",
-                "risk": submission.Risco,
-                "investFrequency": submission.Frequencia_Invest,
-                "investPeriod": submission.Periodo_Invest,
-                "preference": submission.Preferencia,
-                "horizon": submission.Horizonte,
-                "investAmount": submission.Valor_Investimento,
-                "financialGoals": objetivos,
-                "monthlyExpenses": submission.Custo_Vida,
-                "atendimento_preferencia": submission.get_Contato_display() if submission.Contato else "N/A",
-            }
-            
-            pdf_path = gerar_relatorio_pdf_weasyprint(cliente, form_data)
-            
-            with open(pdf_path, 'rb') as f:
-                pdf_content = f.read()
-            
-            try:
-                os.remove(pdf_path)
-            except Exception:
-                pass
-            
-            nome_cliente = submission.Nome or "cliente"
-            response = HttpResponse(pdf_content, content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="relatorio_{nome_cliente}.pdf"'
-            response['Content-Length'] = len(pdf_content)
-            return response
-            
-        except Exception as e:
-            logger.error(f"Erro ao gerar relatório: {e}", exc_info=True)
-            return Response({
-                'success': False,
-                'error': str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
-
     @action(detail=True, methods=["get"], url_path="relatorio-data")
     def relatorio_data(self, request, pk=None):
         try:
-            from onboarding.api.v1.relatorio_weasyprint import (
-                determinar_perfil_investidor,
-                calcular_capacidade_poupanca,
-                calcular_aporte_mensal_necessario,
-                calcular_tempo_para_meta,
-                calcular_gap,
-                recomendar_seguros,
-                recomendar_eficiencia_fiscal,
-                gerar_texto_atendimento,
-                formatar_br,
-                to_float,
-                ALOCACOES_POR_PERFIL,
-                TAXA_JUROS_ANUAL,
-            )
-
             submission = self.get_object()
 
             # ── Idade ────────────────────────────────────────────
@@ -223,6 +156,7 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                     if submission.Estado_Civil
                     else "N/A"
                 ),
+                "dependentes": submission.Dependentes or 0,
             }
 
             # ── Objetivos raw ────────────────────────────────────
@@ -252,6 +186,7 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                 "investAmount":        submission.Valor_Investimento,
                 "financialGoals":      objetivos_raw,
                 "monthlyExpenses":     submission.Custo_Vida,
+                "foreignInvestment":   submission.Investimento_Exterior,
                 "atendimento_preferencia": (
                     submission.get_Contato_display()
                     if submission.Contato
@@ -318,12 +253,82 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                 })
 
             # ── Proteção e fiscal ────────────────────────────────
-            seguros     = recomendar_seguros(form_data, cliente)
-            eficiencias = recomendar_eficiencia_fiscal(form_data)
+            seguros_recomendados = recomendar_seguros(form_data, cliente)
+            eficiencia_fiscal = recomendar_eficiencia_fiscal(form_data)
             seguro_vida = patrimonio * 0.2
 
+            # ===== TODOS OS SEGUROS/PROTEÇÃO QUE O USUÁRIO POSSUI =====
+            seguros_possui = {
+                "seguro_vida": submission.Seguro == "YES",
+                "seguro_invalidez": submission.Seguro_Invalidez == "YES",
+                "planejamento_sucessorio": submission.Sucessao == "YES",
+                "estrutura_societaria": submission.Estrutura_Societaria == "YES",
+                "investimento_exterior": submission.Investimento_Exterior == "YES",
+            }
+            
+            # ===== TEXTO PARA RELATÓRIO (mostrar o que ele já tem) =====
+            seguros_contratados_lista = []
+            if seguros_possui["seguro_vida"]:
+                seguros_contratados_lista.append("Seguro de Vida")
+            if seguros_possui["seguro_invalidez"]:
+                seguros_contratados_lista.append("Seguro de Invalidez")
+            if seguros_possui["planejamento_sucessorio"]:
+                seguros_contratados_lista.append("Planejamento Sucessório")
+            if seguros_possui["estrutura_societaria"]:
+                seguros_contratados_lista.append("Estrutura Societária/Holding")
+            if seguros_possui["investimento_exterior"]:
+                seguros_contratados_lista.append("Investimento no Exterior")
+            
+            # ===== RECOMENDAÇÕES BASEADAS NO QUE ELE NÃO TEM =====
+            recomendacoes_personalizadas = []
+            
+            # Recomendar seguro de vida
+            if not seguros_possui["seguro_vida"] and to_float(submission.Patrimonio_Financeiro) > 500000:
+                recomendacoes_personalizadas.append({
+                    "tipo": "Seguro de Vida",
+                    "motivo": "Proteção financeira para sua família e patrimônio",
+                    "prioridade": "Alta",
+                    "campo_model": "Seguro"
+                })
+            
+            # Recomendar seguro invalidez
+            if not seguros_possui["seguro_invalidez"] and to_float(submission.Renda_Mensal) > 10000:
+                recomendacoes_personalizadas.append({
+                    "tipo": "Seguro de Invalidez",
+                    "motivo": "Garantia de renda em caso de incapacidade para trabalhar",
+                    "prioridade": "Alta",
+                    "campo_model": "Seguro_Invalidez"
+                })
+            
+            # Recomendar planejamento sucessório
+            if not seguros_possui["planejamento_sucessorio"] and to_float(submission.Patrimonio_Imobiliario) > 0:
+                recomendacoes_personalizadas.append({
+                    "tipo": "Planejamento Sucessório",
+                    "motivo": "Evitar custos de inventário e proteger seus herdeiros",
+                    "prioridade": "Média",
+                    "campo_model": "Sucessao"
+                })
+            
+            # Recomendar estrutura societária
+            if not seguros_possui["estrutura_societaria"] and submission.Profissao == "JOB_ENTREPRENEUR":
+                recomendacoes_personalizadas.append({
+                    "tipo": "Estrutura Societária/Holding",
+                    "motivo": "Separar patrimônio pessoal do negócio e reduzir riscos",
+                    "prioridade": "Alta",
+                    "campo_model": "Estrutura_Societaria"
+                })
+            
+            # Recomendar investimento exterior
+            if not seguros_possui["investimento_exterior"] and to_float(submission.Patrimonio_Financeiro) > 1000000:
+                recomendacoes_personalizadas.append({
+                    "tipo": "Investimento no Exterior",
+                    "motivo": "Diversificação cambial e proteção jurídica internacional",
+                    "prioridade": "Média",
+                    "campo_model": "Investimento_Exterior"
+                })
+
             estado_civil = cliente.get("estado_civil", "")
-            tem_filhos   = submission.Filhos != "CH_NONE" if submission.Filhos else False
+            tem_filhos = submission.Filhos != "CH_NONE" if submission.Filhos else False
             necessidade_sucessao = (
                 estado_civil in ["Casado", "União Estável", "CASADO", "UNIAO_ESTAVEL"]
                 or tem_filhos
@@ -333,7 +338,9 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                 form_data.get("atendimento_preferencia", ""), perfil
             )
 
+            # ── Resposta final COM TODOS OS CAMPOS DE SEGUROS ──
             return Response({
+                # ===== CAMPOS EXISTENTES =====
                 "cliente":               cliente,
                 "perfil":                perfil,
                 "capacidade_mensal":     round(capacidade["mensal"], 2),
@@ -344,14 +351,79 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                 "patrimonio_fmt":        formatar_br(patrimonio),
                 "alocacoes":             alocacoes,
                 "objetivos":             objetivos_processados,
-                "seguros":               seguros,
-                "eficiencias":           eficiencias,
+                "seguros_recomendados":  seguros_recomendados,
+                "eficiencias":           eficiencia_fiscal["recomendacoes"],
+                "eficiencia_motivo":     eficiencia_fiscal["motivo"],
                 "seguro_vida":           round(seguro_vida, 2),
                 "seguro_vida_fmt":       formatar_br(seguro_vida),
                 "necessidade_sucessao":  necessidade_sucessao,
                 "texto_atendimento":     texto_atendimento,
                 "taxa_juros":            f"{TAXA_JUROS_ANUAL * 100:.0f}%",
                 "data_geracao":          date.today().strftime("%B %Y").upper(),
+                
+                # ===== CAMPOS DO MODELO =====
+                "tem_filhos": submission.Filhos != "CH_NONE" if submission.Filhos else False,
+                "dependentes": submission.Dependentes,
+                "patrimonio_investidor": formatar_br(to_float(submission.Patrimonio_Financeiro)),
+                "patrimonio_imobiliario": formatar_br(to_float(submission.Patrimonio_Imobiliario)),
+                "quantidade_imoveis": submission.Qtd_Imoveis or 0,
+                
+                "investe_mensal": formatar_br(to_float(submission.Valor_Investimento)) if submission.Frequencia_Invest == "YES" else "Não informado",
+                "periodicidade_investimento": submission.get_Periodo_Invest_display() if submission.Periodo_Invest else "N/A",
+                "horizonte_investimento": submission.get_Horizonte_display() if submission.Horizonte else "N/A",
+                
+                "preferencia_risco": submission.get_Risco_display() if submission.Risco else "N/A",
+                "preferencia_alocacao": submission.get_Preferencia_display() if submission.Preferencia else "N/A",
+                
+                "objetivos_prazos": [
+                    {
+                        "desc": obj.get("name") or obj.get("nome", "Não informado"),
+                        "prazo_meses": int(obj.get("months", 12))
+                    }
+                    for obj in objetivos_raw
+                ],
+                
+                # ===== NOVOS CAMPOS DE SEGUROS E PROTEÇÃO =====
+                "seguros_contratados": seguros_possui,
+                "seguros_contratados_lista": seguros_contratados_lista,
+                "recomendacoes_seguros_personalizadas": recomendacoes_personalizadas,
+                "total_seguros_contratados": len(seguros_contratados_lista),
+                "possui_algum_seguro": any(seguros_possui.values()),
+                "percentual_protecao": round((len(seguros_contratados_lista) / 5) * 100, 0),
+                
+                # Detalhamento individual para o frontend usar como quiser
+                "detalhes_seguros": {
+                    "vida": {
+                        "possui": seguros_possui["seguro_vida"],
+                        "campo_model": "Seguro",
+                        "recomendado": not seguros_possui["seguro_vida"] and to_float(submission.Patrimonio_Financeiro) > 500000,
+                        "prioridade": "Alta" if not seguros_possui["seguro_vida"] and to_float(submission.Patrimonio_Financeiro) > 500000 else "Baixa"
+                    },
+                    "invalidez": {
+                        "possui": seguros_possui["seguro_invalidez"],
+                        "campo_model": "Seguro_Invalidez",
+                        "recomendado": not seguros_possui["seguro_invalidez"] and to_float(submission.Renda_Mensal) > 10000,
+                        "prioridade": "Alta" if not seguros_possui["seguro_invalidez"] and to_float(submission.Renda_Mensal) > 10000 else "Baixa"
+                    },
+                    "sucessao": {
+                        "possui": seguros_possui["planejamento_sucessorio"],
+                        "campo_model": "Sucessao",
+                        "recomendado": not seguros_possui["planejamento_sucessorio"] and to_float(submission.Patrimonio_Imobiliario) > 0,
+                        "prioridade": "Média" if not seguros_possui["planejamento_sucessorio"] and to_float(submission.Patrimonio_Imobiliario) > 0 else "Baixa"
+                    },
+                    "estrutura": {
+                        "possui": seguros_possui["estrutura_societaria"],
+                        "campo_model": "Estrutura_Societaria",
+                        "recomendado": not seguros_possui["estrutura_societaria"] and submission.Profissao == "JOB_ENTREPRENEUR",
+                        "prioridade": "Alta" if not seguros_possui["estrutura_societaria"] and submission.Profissao == "JOB_ENTREPRENEUR" else "Baixa"
+                    },
+                    "exterior": {
+                        "possui": seguros_possui["investimento_exterior"],
+                        "campo_model": "Investimento_Exterior",
+                        "recomendado": not seguros_possui["investimento_exterior"] and to_float(submission.Patrimonio_Financeiro) > 1000000,
+                        "prioridade": "Média" if not seguros_possui["investimento_exterior"] and to_float(submission.Patrimonio_Financeiro) > 1000000 else "Baixa"
+                    }
+                }
             })
 
         except Exception as e:
@@ -360,6 +432,7 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                 {"success": False, "error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        
 
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request):
@@ -372,3 +445,71 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
             }
             return Response(data, status=status.HTTP_200_OK)
         return Response({"detail": "Não autenticado."}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+# =========================
+# RELATÓRIO PDF VIEWSET
+# =========================
+from django.template.loader import render_to_string
+from weasyprint import HTML, CSS
+from django.conf import settings
+from pathlib import Path
+
+class RelatorioPDFViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=["get"], url_path="pdf/(?P<submission_id>[^/.]+)")
+    def gerar_pdf(self, request, submission_id=None):
+        """
+        Gera PDF do relatório usando WeasyPrint
+        """
+        try:
+            # Buscar o submission
+            submission = FormSubmission.objects.get(id=submission_id, user=request.user)
+            
+            # Reaproveitar a lógica do relatorio_data
+            view = FormSubmissionViewSet()
+            view.request = request
+            view.kwargs = {'pk': submission_id}
+            
+            response = view.relatorio_data(request, pk=submission_id)
+            
+            if response.status_code != 200:
+                return Response({"error": "Erro ao gerar dados do relatório"}, 
+                              status=response.status_code)
+            
+            dados_relatorio = response.data
+            
+            # Renderizar o template HTML
+            html_string = render_to_string('relatorio_pdf.html', {
+                'data': dados_relatorio,
+                'STATIC_URL': settings.STATIC_URL,
+                'base_url': request.build_absolute_uri('/')
+            })
+            
+            # Configurar CSS
+            css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'relatorio_pdf.css')
+            
+            # Gerar PDF
+            html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+            
+            if os.path.exists(css_path):
+                with open(css_path, 'r', encoding='utf-8') as css_file:
+                    css_string = css_file.read()
+                pdf_file = html.write_pdf(stylesheets=[CSS(string=css_string)])
+            else:
+                pdf_file = html.write_pdf()
+            
+            # Retornar PDF
+            http_response = HttpResponse(pdf_file, content_type='application/pdf')
+            http_response['Content-Disposition'] = f'attachment; filename="relatorio_{submission.Nome}_{submission.id}.pdf"'
+            
+            return http_response
+            
+        except FormSubmission.DoesNotExist:
+            return Response({"error": "Submission não encontrado"}, 
+                          status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Erro ao gerar PDF: {e}", exc_info=True)
+            return Response({"error": str(e)}, 
+                          status=status.HTTP_400_BAD_REQUEST)

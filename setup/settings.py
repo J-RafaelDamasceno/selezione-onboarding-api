@@ -16,7 +16,8 @@ SECRET_KEY = os.environ.get(
     "django-insecure-dev-key"
 )
 
-DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+# DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+DEBUG = True
 
 # Backend do Render + localhost
 ALLOWED_HOSTS = [
@@ -67,20 +68,24 @@ MIDDLEWARE = [
 ]
 
 # ============================================
-# CORS (Vercel production + previews)
+# CORS CONFIGURATION
 # ============================================
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r"^https://.*\.vercel\.app$",
-]
-
-# Se quiser deixar a URL fixa principal também
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "https://selezione-onboarding.vercel.app",
-    "https://onboarding.selezioneinvestimentos.com.br",
-]
-
-CORS_ALLOW_CREDENTIALS = True
+# 🔧 Em desenvolvimento, libera todas as origens (mais fácil)
+# 🔒 Em produção, apenas origens específicas
+if DEBUG:
+    # Desenvolvimento: aceita qualquer origem
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
+else:
+    # Produção: apenas origens autorizadas
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^https://.*\.vercel\.app$",
+    ]
+    CORS_ALLOWED_ORIGINS = [
+        "https://selezione-onboarding.vercel.app",
+        "https://onboarding.selezioneinvestimentos.com.br",
+    ]
+    CORS_ALLOW_CREDENTIALS = True
 
 # ============================================
 # AUTH
@@ -128,6 +133,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.static",  
+                "django.template.context_processors.media",
             ],
         },
     },
@@ -180,3 +187,7 @@ if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+
+
+# Opcional: Configurar timeout maior para geração de PDFs grandes
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
