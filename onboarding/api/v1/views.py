@@ -361,6 +361,8 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                     }
                     for obj in objetivos_raw
                 ],
+                "expectativa": submission.Expectativa or "",  # O que você espera de um assessor?
+                "nao_resolvido": submission.Nao_Resolvido or "",  
             })
 
         except Exception as e:
