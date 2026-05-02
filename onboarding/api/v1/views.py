@@ -10,7 +10,7 @@ from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from weasyprint import HTML, CSS
+# from weasyprint import HTML, CSS
 
 from onboarding.models import FormSubmission
 from onboarding.api.v1.serializers import (
@@ -362,7 +362,7 @@ class FormSubmissionViewSet(viewsets.ModelViewSet):
                     for obj in objetivos_raw
                 ],
                 "expectativa": submission.Expectativa or "",  # O que você espera de um assessor?
-                "nao_resolvido": submission.Nao_Resolvido or "",  
+                "nao_resolvido": submission.Nao_Resolvido or "", # O que hoje não está bem resolvido na sua vida financeira?
             })
 
         except Exception as e:
