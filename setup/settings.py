@@ -16,8 +16,7 @@ SECRET_KEY = os.environ.get(
     "django-insecure-dev-key"
 )
 
-# DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
 # Backend do Render + localhost
 ALLOWED_HOSTS = [
@@ -48,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
 
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "onboarding",
 ]
